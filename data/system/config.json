@@ -1,0 +1,13 @@
+{
+  "model": "gpt-oss:20b",
+  "historyLimit": 5,
+  "useStreaming": true,
+  "typingEffect": true,
+  "colorOutput": true,
+  "typingDelayMs": 15,
+  "endpoint": "http://localhost:11434/api/generate",
+  "charactersDir": "data/characters",
+  "eventsFile": "data/events/template_events.json",
+  "savesDir": "saves",
+  "defaultInitialAffection": 10
+}

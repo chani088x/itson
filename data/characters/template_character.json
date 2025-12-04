@@ -1,0 +1,9 @@
+{
+  "name": "캐릭터명",
+  "traits": [
+    "성격1",
+    "성격2"
+  ],
+  "initialAffection": 0,
+  "initialStage": 0
+}
