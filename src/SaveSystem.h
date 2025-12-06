@@ -7,34 +7,23 @@ class Character;
 struct DialogueContext;
 
 /**
- * Serializes and restores game state to JSON saves.
+ * 게임 상태를 JSON 형식으로 직렬화(저장)하고 복원(로드)합니다.
  */
 class SaveSystem {
 public:
-    // Creates a save system rooted at the given directory.
+    // 지정된 디렉토리를 루트로 하는 저장 시스템을 생성합니다.
     explicit SaveSystem(std::string directory);
 
-    // Saves character state and dialogue history to disk.
-    bool Save(const Character& character, const DialogueContext& context) const;
-
-    // Loads character state and dialogue history if a save exists.
-    bool Load(Character& character, DialogueContext& context) const;
-
-    // Returns true if a save file exists for the given character.
-    bool Exists(const Character& character) const;
-
-    // Lists available save files (filenames only).
-    std::vector<std::string> ListSaveFiles() const;
-
-    // Saves to a new file with timestamp; returns filename or empty on failure.
+    // 현재 상태를 새로운 파일로 저장합니다. (타임스탬프)
     std::string SaveNew(const Character& character, const DialogueContext& context) const;
 
-    // Loads from a given filename (basename only, stored in directory_).
+    // 특정 파일을 로드합니다.
     bool LoadFromFile(const std::string& filename, Character& character, DialogueContext& context) const;
 
-private:
-    std::string BuildPath(const Character& character) const;
-    std::string BuildPathFromName(const std::string& name) const;
+    // 저장된 파일 목록을 반환합니다.
+    std::vector<std::string> ListSaveFiles() const;
 
+private:
     std::string directory_;
+    std::string BuildPathFromName(const std::string& name) const;
 };

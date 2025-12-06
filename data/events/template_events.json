@@ -1,9 +1,26 @@
 [
   {
-    "id": "E20",
-    "threshold": 20,
-    "title": "이벤트 제목",
-    "lines": [],
-    "choices": []
+    "id": "E25",
+    "threshold": 25,
+    "title": "",
+    "lines": []
+  },
+  {
+    "id": "E50",
+    "threshold": 50,
+    "title": "",
+    "lines": []
+  },
+  {
+    "id": "E75",
+    "threshold": 75,
+    "title": "",
+    "lines": []
+  },
+  {
+    "id": "E100",
+    "threshold": 100,
+    "title": "",
+    "lines": []
   }
 ]

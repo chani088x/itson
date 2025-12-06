@@ -56,20 +56,32 @@ void Character::SetTraits(const std::vector<std::string>& traits) {
     traits_ = traits;
 }
 
+void Character::SetEmotionStages(const std::map<int, StageInfo>& stages) {
+    emotionStages_ = stages;
+}
+
+const std::map<int, StageInfo>& Character::GetEmotionStages() const {
+    return emotionStages_;
+}
+
+StageInfo Character::GetStageInfo(int stageIdx) const {
+    auto it = emotionStages_.find(stageIdx);
+    if (it != emotionStages_.end()) {
+        return it->second;
+    }
+    return {"알 수 없음", "이 단계에 대한 행동 정의가 없습니다."};
+}
+
 const std::vector<std::string>& Character::GetMemories() const {
-    return memories_.Entries();
+    return memories_;
 }
 
 void Character::AddMemory(const std::string& memory) {
-    memories_.Add(memory);
+    memories_.push_back(memory);
 }
 
 void Character::SetMemories(const std::vector<std::string>& memories) {
-    memories_.Set(memories);
-}
-
-void Character::ClearMemories() {
-    memories_.Clear();
+    memories_ = memories;
 }
 
 void Character::SetFlag(const std::string& flag, bool value) {

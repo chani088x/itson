@@ -8,7 +8,7 @@ public:
     TUI();
     ~TUI();
 
-    // Menu System
+    // 메뉴 시스템
     enum class MenuOption {
         NewGame,
         LoadGame,
@@ -18,18 +18,19 @@ public:
 
     MenuOption ShowMainMenu();
 
-    // Chat Interface
+    // 채팅 인터페이스
     void ShowChatScreen(const std::string& characterName);
     void PrintSystem(const std::string& text);
     void PrintNpc(const std::string& name, const std::string& text);
     void PrintPlayer(const std::string& text);
     std::string ReadInput(const std::string& prompt);
+    std::string ReadPassword(const std::string& prompt);
     
-    // Streaming support
+    // 스트리밍 지원
     void PrintChunk(const std::string& chunk);
     void NewLine();
 
-    // Helpers
+    // 헬퍼 함수
     void ClearScreen();
     void WaitForKey();
 

@@ -1,81 +1,72 @@
-# AIDatingSim
+# 봄날의 추억 (AI Dating Sim)
 
-콘솔 기반 C++17 연애 시뮬레이션 엔진 예제입니다. 플레이어 입력 → LLM(Ollama) → 캐릭터 응답 루프, 호감도/관계 단계, 임계치 이벤트, JSON 기반 데이터/저장 시스템, 스트리밍 출력(타자 효과 포함)을 제공합니다.
+콘솔 기반의 AI 연애 시뮬레이션 게임입니다. C++로 작성되었으며, LLM(Ollama 또는 OpenAI)을 활용하여 캐릭터와 자유로운 대화가 가능합니다.
+호감도에 따라 관계가 발전하고, 특정 이벤트가 발생하는 인터랙티브 스토리텔링을 경험해 보세요.
 
-## 기능 개요
+## 주요 기능 (What's New)
 
-- **대화 루프**: `Game::Run()`이 플레이어 입력을 받고 `PromptBuilder` → `LLMClient` → `DialogueManager`를 통해 응답을 출력합니다.
-- **호감도 & 관계 단계**: 0~100 호감도와 0~3 관계 단계를 추적하며, 임계치 도달 시 자동 상승합니다.
-- **이벤트 엔진**: `/data/events/*.json`에서 로드한 이벤트를 `EventManager`가 임계치에 맞춰 1회성 실행합니다.
-- **선택지 시스템**: 이벤트마다 A/B/C 선택지를 정의해 호감도/플래그를 조정할 수 있습니다.
-- **저장/불러오기**: `SaveSystem`이 루트별 JSON 상태(캐릭터/히스토리/플래그)를 저장합니다.
-- **콘솔 UI**: ANSI/Windows 색상, 타자 효과, 스트리밍 chunk 즉시 출력.
-- **LLM 연동**: 로컬 Ollama `http://localhost:11434/api/generate`에 libcurl로 연결. `stream=true`일 때 JSON line chunk를 즉시 파싱 후 출력합니다.
+- **AI 캐릭터와의 자유 대화**: 플레이어의 입력에 따라 실시간으로 생성되는 AI의 반응.
+- **호감도 시스템**: 대화 내용에 따라 호감도가 변화하며, 관계 단계가 발전합니다. (0~100, 4단계)
+- **이벤트 시스템**: 특정 호감도 도달 시 미리 정의된 이벤트가 발생하여 스토리를 진행시킵니다.
+  - 선택지 없이 자연스럽게 이어지는 스토리 연출.
+  - 몰입감을 위한 텍스트 타이핑 효과 적용.
+- **저장 및 불러오기**:
+  - `saves/` 폴더에 JSON 형식으로 진행 상황 저장.
+  - 기존 세이브 파일에 덮어쓰기 및 자동 저장 기능.
+- **깔끔한 TUI (Text User Interface)**: 가독성을 높인 줄바꿈 처리와 직관적인 인터페이스.
+- **멀티 LLM 지원**:
+  - **Ollama (Local)**: 로컬에서 `qwen2.5:7b` 등의 모델을 무료로 사용 가능.
+  - **OpenAI (Cloud)**: API Key 입력을 통해 GPT-4o 등 고성능 모델 사용 가능. (시작 시 자동 감지 및 입력 요청)
 
-## 의존성
+## 설치 및 빌드
 
-- C++17 호환 컴파일러
-- [libcurl](https://curl.se/)
-- [nlohmann/json](https://github.com/nlohmann/json)
-- Ollama 서버 (예: `qwen2.5:7b` 모델)
+### 요구 사항
+- C++17 호환 컴파일러 (MSVC, GCC 등)
+- CMake 3.10 이상
+- [Ollama](https://ollama.com/) (로컬 구동 시)
+- OpenAI API Key (클라우드 모델 사용 시)
 
-### vcpkg 예시
+### 빌드 방법 (Windows)
 
 ```powershell
-vcpkg install curl nlohmann-json
+mkdir build
+cd build
+cmake -DCMAKE_TOOLCHAIN_FILE=[vcpkg경로]/scripts/buildsystems/vcpkg.cmake ..
+cmake --build .
 ```
 
-## 빌드
+*참고: vcpkg를 사용하여 `libcurl`, `nlohmann-json` 라이브러리를 설치해야 합니다.*
 
-### Windows (PowerShell)
+## 실행 방법
 
 ```powershell
-cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=[vcpkg-root]/scripts/buildsystems/vcpkg.cmake
-cmake --build build --config Release
+cd build
+.\AIDatingSim.exe
 ```
 
-### macOS/Linux
+1.  시스템이 설정 파일(`data/system/config.json`)을 로드합니다.
+2.  OpenAI를 사용하려면 시작 시 API Key를 입력하세요. (Ollama 사용 시 엔터)
+3.  **새 게임**을 시작하거나 **불러오기**를 통해 이전 기록을 이어서 할 수 있습니다.
 
-```bash
-cmake -B build -S .
-cmake --build build
-```
+## 게임 플레이 가이드
 
-## Ollama 설정
+- **대화하기**: 자유롭게 채팅하듯 입력하세요.
+- **명령어**:
+    - `/save`: 현재 상태 저장
+    - `/quit` 또는 `/exit`: 게임 종료
+    - `/restart`: 재시작
+- **이벤트**: 호감도가 20, 40, 60, 80 등 특정 구간에 도달하면 이벤트 컷신이 출력됩니다.
 
-1. [https://ollama.com/](https://ollama.com/)에서 설치합니다.
-2. 모델 풀/실행
-   ```bash
-   ollama pull qwen2.5:7b
-   ollama run qwen2.5:7b
-   ```
-3. 서버 구동 (기본 11434)
-   ```bash
-   ollama serve
-   ```
+## 파일 구조 및 커스터마이징
 
-## 실행
-
-```bash
-./build/AIDatingSim
-```
-
-- 실행 후 캐릭터 루트를 선택하고 대화를 시작합니다.
-- 명령어: `save`, `load`, `help`, `quit`.
-
-## 데이터 & 설정
-
-- `/data/characters/*.json`: 캐릭터 정의. 실제 데이터 파일을 추가하고 템플릿은 참고만 하세요.
-- `/data/events/*.json`: 임계치 이벤트 템플릿. `lines`와 `choices`에 실제 내용을 채우세요(`// TODO` 유지).
-- `/data/system/config.json`:
-  - `model`: Ollama 모델명
-  - `historyLimit`: 프롬프트에 포함할 최근 턴 수
-  - `useStreaming`: true면 스트리밍 출력, false면 비스트리밍
-  - `typingEffect`, `colorOutput`, `typingDelayMs`: 콘솔 효과 관련
-  - `endpoint`: Ollama API 주소 (필요 시 변경)
-
-스트리밍을 끄고 싶다면 `useStreaming`을 `false`로 수정 후 재실행하세요. 저장 데이터는 `./saves` 폴더에 캐릭터별 JSON으로 생성됩니다.
+- `data/characters/template_character.json`: AI 캐릭터의 성격, 말투 프롬프트 설정.
+- `data/events/template_events.json`: 호감도별 이벤트 대사 설정. 자유롭게 수정하여 자신만의 스토리를 만드세요.
+- `data/system/config.json`:
+    - `model`: 사용할 모델명 (예: `gpt-4o`, `qwen2.5:7b`)
+    - `useStreaming`: 텍스트 스트리밍 효과 여부
+    - `savesDir`: 세이브 파일 경로 (기본: `../saves`)
 
 ---
 
-필요한 기능 확장(감성 점수 규칙, 이벤트 JSON 작성, 추가 캐릭터/루트 등)을 자유롭게 구현하여 자신만의 연애 시뮬레이션을 완성해 보세요!
+## 라이선스 및 참고
+이 프로젝트는 학습 및 예제 목적으로 제작되었습니다.

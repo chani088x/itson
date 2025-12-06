@@ -16,7 +16,7 @@
 #include "TUI.h"
 
 namespace {
-constexpr std::array<int, 4> kStageThresholds{0, 25, 50, 80};
+constexpr std::array<int, 5> kStageThresholds{0, 25, 50, 75, 100};
 }  // namespace
 
 Game::Game(Config& config,
@@ -33,6 +33,46 @@ Game::Game(Config& config,
       isRunning_(false) {}
 
 void Game::Run() {
+    // 초기 API 키 검증 루프
+    bool isKeyValid = false;
+    while (!isKeyValid) {
+        if (config_.GetApiKey().empty()) {
+            ui_.ClearScreen();
+            ui_.PrintSystem("================================================");
+            ui_.PrintSystem("             [ API 설정 필요 ]");
+            ui_.PrintSystem("================================================");
+            ui_.PrintSystem("OpenAI API 키가 설정되지 않았습니다.");
+            ui_.PrintSystem("환경 변수 OPENAI_API_KEY를 설정하거나 직접 입력하세요.");
+            ui_.PrintSystem("(입력한 키는 저장되지 않고 이번 실행에만 사용됩니다)");
+            ui_.NewLine();
+            
+            std::string key = ui_.ReadInput("API Key 입력> ");
+            if (!key.empty()) {
+                config_.SetApiKey(key);
+                llmClient_.SetApiKey(key);
+            } else {
+                ui_.PrintSystem("경고: API 키 없이 진행합니다. AI 응답이 실패할 수 있습니다.");
+                std::this_thread::sleep_for(std::chrono::seconds(2));
+                break; // 사용자가 명시적으로 건너뜀
+            }
+        }
+
+        ui_.PrintSystem("API 키 검증 중...");
+        if (llmClient_.TestConnection()) {
+            ui_.PrintSystem("검증 성공! 게임을 시작합니다.");
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            isKeyValid = true;
+        } else {
+            ui_.PrintSystem("!!! 오류: API 키 검증에 실패했습니다. (401 Unauthorized 등) !!!");
+            ui_.PrintSystem("키가 올바른지 확인해 주세요.");
+            ui_.PrintSystem("Enter를 누르면 다시 입력합니다.");
+            ui_.WaitForKey();
+            config_.SetApiKey(""); // 프롬프트 루프를 강제하기 위해 초기화
+        }
+    }
+    
+    ui_.ClearScreen();
+
     while (true) {
         TUI::MenuOption option = ui_.ShowMainMenu();
         
@@ -42,29 +82,72 @@ void Game::Run() {
 
         if (option == TUI::MenuOption::NewGame) {
             characters_.clear();
-            Character fallback("샘플 캐릭터");
-            fallback.SetTraits({"온화함", "낙천주의"});
-            fallback.SetAffection(config_.GetDefaultInitialAffection());
-            fallback.SetRelationshipStage(0);
-            characters_.push_back(fallback);
+            
+            nlohmann::json charData;
+            Character newChar("New Character");
+            if (JsonHelper::LoadFromFile("data/characters/template_character.json", charData)) {
+                newChar.SetName(charData.value("name", "New Character"));
+                newChar.SetAffection(charData.value("initialAffection", config_.GetDefaultInitialAffection()));
+                newChar.SetRelationshipStage(charData.value("initialStage", 0));
+                if (charData.contains("traits") && charData["traits"].is_array()) {
+                    newChar.SetTraits(charData["traits"].get<std::vector<std::string>>());
+                }
+                
+                // 감정 단계 로드
+                if (charData.contains("emotionStages") && charData["emotionStages"].is_object()) {
+                    std::map<int, StageInfo> stages;
+                    for (auto& [key, val] : charData["emotionStages"].items()) {
+                        int stageIdx = std::stoi(key);
+                        stages[stageIdx] = {
+                            val.value("name", "Unknown"),
+                            val.value("behavior", "")
+                        };
+                    }
+                    newChar.SetEmotionStages(stages);
+                }
+            } else {
+                ui_.PrintSystem("경고: 캐릭터 템플릿(data/characters/template_character.json)을 찾을 수 없습니다.");
+                ui_.PrintSystem("기본값(샘플 캐릭터)으로 시작합니다.");
+                
+                newChar.SetName("샘플 캐릭터");
+                newChar.SetTraits({"온화함", "낙천주의"});
+                newChar.SetAffection(config_.GetDefaultInitialAffection());
+                newChar.SetRelationshipStage(0);
+            }
+
+            characters_.push_back(newChar);
             activeCharacter_ = &characters_.front();
             
             dialogueManager_.GetContext().Clear();
             LoadEvents(config_.GetEventsFile());
             
-            ui_.ShowChatScreen(activeCharacter_->GetName());
+            ui_.ClearScreen();
+            ui_.PrintSystem("================================================");
+            ui_.PrintSystem("         [ 에피소드 : 소꿉친구의 비밀 ]");
+            ui_.PrintSystem("================================================");
+            ui_.PrintSystem("        어릴 적부터 함께 자란 소꿉친구.");
+            ui_.PrintSystem("  오랜만에 만났는데 태도가 영 심상치 않다.");
+            ui_.PrintSystem("     \"흥, 딱히 너를 기다린 건 아니거든!\"");
+            ui_.PrintSystem("================================================");
+            ui_.WaitForKey();
+
+            ui_.ShowChatScreen("설정");
+            ui_.PrintSystem("플레이어의 이름을 입력해 주세요.");
+            playerName_ = ui_.ReadInput("이름> ");
+            if (playerName_.empty()) playerName_ = "당신";
+
             ui_.PrintSystem("캐릭터 이름을 입력해 주세요.");
             std::string nameInput = ui_.ReadInput("이름> ");
             if (!nameInput.empty()) {
                 activeCharacter_->SetName(nameInput);
-                ui_.ShowChatScreen(activeCharacter_->GetName());
             }
+            ui_.ShowChatScreen(activeCharacter_->GetName());
             
             ui_.PrintSystem(activeCharacter_->GetName() + "과(와) 이야기를 시작합니다.");
             
             isRunning_ = true;
             while (isRunning_) {
-                std::string input = ui_.ReadInput("당신> ");
+                std::string input = ui_.ReadInput(playerName_ + "> ");
                 if (input.empty()) continue;
 
                 if (input.front() == '/') {
@@ -78,11 +161,12 @@ void Game::Run() {
         } else if (option == TUI::MenuOption::LoadGame) {
             PromptLoadSelection();
             if (activeCharacter_) {
+                if (playerName_.empty()) playerName_ = "당신"; 
                 ui_.ShowChatScreen(activeCharacter_->GetName());
                 LoadEvents(config_.GetEventsFile());
                 isRunning_ = true;
                 while (isRunning_) {
-                    std::string input = ui_.ReadInput("당신> ");
+                    std::string input = ui_.ReadInput(playerName_ + "> ");
                     if (input.empty()) continue;
 
                     if (input.front() == '/') {
@@ -103,20 +187,12 @@ void Game::ProcessTurn(const std::string& userInput) {
     if (!activeCharacter_) return;
 
     DialogueContext& context = dialogueManager_.GetContext();
-    context.AddTurn("Player", userInput);
+    context.AddTurn(playerName_, userInput);
 
-    std::string prompt = "System: You are " + activeCharacter_->GetName() + ".\n";
-    prompt += "Traits: ";
-    for (const auto& t : activeCharacter_->GetTraits()) prompt += t + ", ";
-    prompt += "\n";
-    prompt += "Affection: " + std::to_string(activeCharacter_->GetAffection()) + "\n";
-    prompt += "History:\n" + context.ToHistoryString(10) + "\n";
-    prompt += "Player: " + userInput + "\n";
-    prompt += activeCharacter_->GetName() + ":";
+    // 채팅 메시지 생성 (DialogueManager에게 위임)
+    nlohmann::json messages = dialogueManager_.BuildFullPrompt(activeCharacter_, playerName_, userInput);
 
-    std::string npcReply = config_.UseStreaming()
-                                ? dialogueManager_.PrintStreaming(llmClient_, prompt)
-                                : dialogueManager_.PrintNonStreaming(llmClient_, prompt);
+    std::string npcReply = dialogueManager_.PrintReply(llmClient_, messages);
 
     context.AddTurn(activeCharacter_->GetName(), npcReply);
 
@@ -167,25 +243,19 @@ void Game::SaveProgress() {
 }
 
 void Game::LoadProgress() {
-    // Logic moved to Run() / Menu
+    // 로직이 Run()이나 메뉴로 이동됨
 }
 
 void Game::AutoAdvanceRelationship(Character& character) {
     int currentStage = character.GetRelationshipStage();
     if (currentStage >= static_cast<int>(kStageThresholds.size()) - 1) return;
 
+    // 참고: 현재 임계값은 kStageThresholds(0, 25, 50, 75, 100)에 하드코딩 되어 있습니다.
     int nextStage = currentStage + 1;
     if (character.GetAffection() >= kStageThresholds[nextStage]) {
         character.AdvanceRelationshipStage();
         ui_.PrintSystem("관계 단계 상승! (" + std::to_string(nextStage) + ")");
     }
-}
-
-void Game::ReturnToStartMenu() {
-    isRunning_ = false;
-}
-
-void Game::UpdateStatusPanel() {
 }
 
 void Game::PromptLoadSelection() {
@@ -242,60 +312,66 @@ void Game::LoadEvents(const std::string& filePath) {
 void Game::CheckAndTriggerEvents() {
     if (!activeCharacter_) return;
     
+    bool triggered = false;
+    int currentAffection = activeCharacter_->GetAffection();
+    
     for (const auto& event : events_) {
-        if (activeCharacter_->GetAffection() >= event.threshold && 
+        // 조건:
+        // 1. 호감도 >= 임계값
+        // 2. 아직 발생하지 않은 이벤트
+        if (event.threshold > 0 && 
+            currentAffection >= event.threshold && 
             !activeCharacter_->HasTriggeredEvent(event.threshold)) {
             
-            ui_.PrintSystem("이벤트를 보시겠습니까? (y/n)");
-            std::string ans = ui_.ReadInput("> ");
+            ui_.PrintSystem(">>> 이벤트 발생 조건 달성: [" + event.title + "]");
+            std::string ans = ui_.ReadInput("이벤트를 보시겠습니까? (y/n)> ");
             if (!ans.empty() && (ans[0] == 'y' || ans[0] == 'Y')) {
+                // 이벤트 전 자동 저장
+                ui_.PrintSystem("[시스템] 이벤트 진입 전 자동 저장을 수행합니다...");
+                SaveProgress();
+                
                 PlayEvent(event);
                 activeCharacter_->MarkEventTriggered(event.threshold);
+                triggered = true;
             }
         }
+    }
+    
+    if (triggered) {
+        ui_.ClearScreen();
+        ui_.ShowChatScreen(activeCharacter_->GetName());
+        RestoreChatHistory(); // 채팅 내역 복구
     }
 }
 
 void Game::PlayEvent(const Event& event) {
     ui_.ClearScreen();
-    ui_.PrintSystem("=== " + event.title + " ===");
+    ui_.PrintSystem(">>> EVENT: " + event.title + " <<<");
     ui_.NewLine();
     
     for (const auto& line : event.lines) {
-        // Stream the line char by char
-        for (char c : line) {
-            std::string s(1, c);
-            ui_.PrintChunk(s);
-            std::this_thread::sleep_for(std::chrono::milliseconds(30)); // Typing effect
-        }
+        // TUI::PrintChunk가 이미 타이핑 효과를 제공하므로 바로 출력
+        ui_.PrintChunk(line);
         ui_.NewLine();
-        ui_.WaitForKey(); // Wait for click/key
+        ui_.WaitForKey(); 
     }
     
-    if (!event.choices.empty()) {
-        ui_.NewLine();
-        ui_.PrintSystem("선택지:");
-        for (size_t i = 0; i < event.choices.size(); ++i) {
-            ui_.PrintSystem(std::to_string(i + 1) + ". " + event.choices[i].text);
-        }
-        
-        while (true) {
-            std::string input = ui_.ReadInput("선택> ");
-            try {
-                int idx = std::stoi(input) - 1;
-                if (idx >= 0 && idx < (int)event.choices.size()) {
-                    const auto& choice = event.choices[idx];
-                    activeCharacter_->AddAffection(choice.affectionDelta);
-                    ui_.PrintSystem(std::string("선택 완료. (호감도 ") + 
-                        (choice.affectionDelta >= 0 ? "+" : "") + 
-                        std::to_string(choice.affectionDelta) + ")");
-                    break;
-                }
-            } catch (...) {}
-            ui_.PrintSystem("올바른 번호를 입력하세요.");
-        }
-    }
+    ui_.PrintSystem(">>> 이벤트 종료 (Enter) <<<");
+    ui_.WaitForKey();
+    
+    // 선택지 처리 로직 제거됨 (사용자 요청)
     
     ui_.WaitForKey();
-    ui_.ShowChatScreen(activeCharacter_->GetName()); // Restore chat screen
+    ui_.ShowChatScreen(activeCharacter_->GetName()); // 화면 복구
+}
+
+void Game::RestoreChatHistory() {
+    const auto& history = dialogueManager_.GetContext().History();
+    for (const auto& turn : history) {
+        if (turn.speaker == "Player" || turn.speaker == playerName_) {
+            ui_.PrintPlayer(turn.text);
+        } else {
+            ui_.PrintNpc(turn.speaker, turn.text);
+        }
+    }
 }

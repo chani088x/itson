@@ -1,7 +1,36 @@
+# Build directories
 build/
-saves/
+bin/
+lib/
+
+# IDE settings
 .vscode/
+.idea/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+
+# Binary files
 *.exe
-*.o
+*.dll
+*.lib
+*.pdb
 *.obj
+*.o
+*.a
+
+# System files
 .DS_Store
+Thumbs.db
+
+# Save data
+saves/
+# data/system/config.json 은 템플릿으로 필요하므로 유지하되, 
+# 만약 개인 설정을 넣는다면 data/system/user_config.json 등으로 분리하는 게 좋음.
+# 지금은 config.json에 민감정보가 없으므로 포함.
+
+# Temporary files
+*.log
+*.tmp
+.gemini/

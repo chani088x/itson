@@ -28,15 +28,21 @@ add_executable(
     src/main.cpp
     src/Game.cpp
     src/Character.cpp
-    src/Event.cpp
     src/DialogueManager.cpp
     src/LLMClient.cpp
-    src/JsonHelper.cpp
     src/SaveSystem.cpp
-    src/Config.cpp
-    src/Memory.cpp
     src/TUI.cpp
 )
 
+# Always sync data directory on build
+add_custom_target(SyncData ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/data
+        ${CMAKE_BINARY_DIR}/data
+    COMMENT "Syncing data directory..."
+)
+
+add_dependencies(AIDatingSim SyncData)
+
 target_include_directories(AIDatingSim PRIVATE src)
-target_link_libraries(AIDatingSim PRIVATE CURL::libcurl nlohmann_json::nlohmann_json)
+target_link_libraries(AIDatingSim PRIVATE CURL::libcurl nlohmann_json::nlohmann_json ws2_32 crypt32)

@@ -13,7 +13,7 @@
 
 int main(int argc, char** argv) {
 #ifdef _WIN32
-    // Enable UTF-8 output on Windows terminals.
+    // Windows 터미널에서 UTF-8 출력을 활성화합니다.
     SetConsoleOutputCP(CP_UTF8);
 #endif
 

@@ -3,6 +3,8 @@
 #include <conio.h> // For _getch on Windows
 #include <iostream>
 #include <windows.h> // For console colors/CP
+#include <thread>
+#include <chrono>
 
 #define KEY_UP 72
 #define KEY_DOWN 80
@@ -90,27 +92,68 @@ void TUI::ShowChatScreen(const std::string& characterName) {
 }
 
 void TUI::PrintSystem(const std::string& text) {
-    std::cout << "[SYS] " << text << "\n";
+    std::cout << "\n" << text << "\n";
 }
 
 void TUI::PrintNpc(const std::string& name, const std::string& text) {
-    std::cout << "[" << name << "] " << text << "\n";
+    std::cout << "\n[" << name << "] " << text << "\n";
 }
 
 void TUI::PrintPlayer(const std::string& text) {
-    // Player input is usually echoed by the terminal, but we can format it if needed.
-    // For this simple TUI, we assume input is already visible or handled by ReadInput.
+    if (text.empty()) return;
+    std::cout << "\n[Player]: " << text << "\n";
 }
 
 std::string TUI::ReadInput(const std::string& prompt) {
-    std::cout << prompt;
+    std::cout << "\n" << prompt;
     std::string input;
     std::getline(std::cin, input);
     return input;
 }
 
+std::string TUI::ReadPassword(const std::string& prompt) {
+    std::cout << prompt;
+    std::string password;
+    char ch;
+    while ((ch = _getch()) != KEY_ENTER) {
+        if (ch == '\b') { // Backspace
+            if (!password.empty()) {
+                password.pop_back();
+                std::cout << "\b \b"; // Erase character from screen
+            }
+        } else {
+            password += ch;
+            std::cout << '*';
+        }
+    }
+    std::cout << std::endl;
+    return password;
+}
+
 void TUI::PrintChunk(const std::string& chunk) {
-    std::cout << chunk;
+    for (size_t i = 0; i < chunk.length(); ) {
+        unsigned char c = static_cast<unsigned char>(chunk[i]);
+        int charLen = 1;
+
+        if ((c & 0x80) == 0) charLen = 1;
+        else if ((c & 0xE0) == 0xC0) charLen = 2;
+        else if ((c & 0xF0) == 0xE0) charLen = 3;
+        else if ((c & 0xF8) == 0xF0) charLen = 4;
+        
+        // Output the full character (1~4 bytes)
+        for (int k = 0; k < charLen && i + k < chunk.length(); ++k) {
+            std::cout << chunk[i + k];
+        }
+        std::cout.flush();
+        
+        i += charLen;
+        
+        // Delay for typing effect
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+
+        // Skip delay for spaces to make it feel natural
+        if (c == ' ') std::this_thread::sleep_for(std::chrono::milliseconds(0));
+    }
 }
 
 void TUI::NewLine() {
