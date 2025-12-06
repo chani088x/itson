@@ -46,7 +46,7 @@ void Game::Run() {
             ui_.PrintSystem("(입력한 키는 저장되지 않고 이번 실행에만 사용됩니다)");
             ui_.NewLine();
             
-            std::string key = ui_.ReadInput("API Key 입력> ");
+            std::string key = ui_.ReadPassword("API Key 입력> ");
             if (!key.empty()) {
                 config_.SetApiKey(key);
                 llmClient_.SetApiKey(key);

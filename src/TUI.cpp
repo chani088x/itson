@@ -116,7 +116,7 @@ std::string TUI::ReadPassword(const std::string& prompt) {
     std::string password;
     char ch;
     while ((ch = _getch()) != KEY_ENTER) {
-        if (ch == '\b') { // Backspace
+         if (ch == '\b') { // Backspace
             if (!password.empty()) {
                 password.pop_back();
                 std::cout << "\b \b"; // Erase character from screen
