@@ -16,7 +16,7 @@ namespace {
         data["affection"] = character.GetAffection();
         data["relationshipStage"] = character.GetRelationshipStage();
         data["traits"] = character.GetTraits();
-        data["memories"] = character.GetMemories();
+
 
         nlohmann::json flags = nlohmann::json::object();
         for (const auto& [flag, value] : character.GetFlags()) {
@@ -44,9 +44,6 @@ namespace {
         character.SetRelationshipStage(data.value("relationshipStage", character.GetRelationshipStage()));
         if (data.contains("traits") && data["traits"].is_array()) {
             character.SetTraits(data["traits"].get<std::vector<std::string>>());
-        }
-        if (data.contains("memories") && data["memories"].is_array()) {
-            character.SetMemories(data["memories"].get<std::vector<std::string>>());
         }
         if (data.contains("flags") && data["flags"].is_object()) {
             for (auto& [key, val] : data["flags"].items()) {

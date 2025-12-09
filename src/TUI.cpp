@@ -2,6 +2,7 @@
 
 #include <conio.h> // For _getch on Windows
 #include <iostream>
+#include <cstdlib>
 #include <windows.h> // For console colors/CP
 #include <thread>
 #include <chrono>
@@ -13,6 +14,9 @@
 TUI::TUI() {
     // Ensure UTF-8 output
     SetConsoleOutputCP(CP_UTF8);
+
+    // Setup Console Font and Size
+    SetupConsole();
     
     // Hide cursor for menu (optional, but looks better)
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -114,20 +118,75 @@ std::string TUI::ReadInput(const std::string& prompt) {
 std::string TUI::ReadPassword(const std::string& prompt) {
     std::cout << prompt;
     std::string password;
-    char ch;
+    int ch;
     while ((ch = _getch()) != KEY_ENTER) {
-         if (ch == '\b') { // Backspace
+        if (ch == 3) { // Ctrl+C
+            std::cout << "^C\n";
+            // Restore cursor before exit
+            HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+            CONSOLE_CURSOR_INFO cursorInfo;
+            GetConsoleCursorInfo(hConsole, &cursorInfo);
+            cursorInfo.bVisible = TRUE;
+            SetConsoleCursorInfo(hConsole, &cursorInfo);
+            exit(0);
+        }
+        if (ch == 0 || ch == 224) { 
+            _getch();
+            continue;
+        }
+
+        if (ch == '\b') {
             if (!password.empty()) {
                 password.pop_back();
-                std::cout << "\b \b"; // Erase character from screen
+                std::cout << "\b \b";
             }
-        } else {
-            password += ch;
+        } else if (ch >= 32 && ch != 127) {
+            password += static_cast<char>(ch);
             std::cout << '*';
         }
     }
     std::cout << std::endl;
     return password;
+}
+
+std::string TUI::ShowApiKeyPrompt() {
+    ClearScreen();
+    std::cout << "================================================\n";
+    std::cout << "             [ API 설정 필요 ]\n";
+    std::cout << "================================================\n";
+    std::cout << "OpenAI API 키가 설정되지 않았습니다.\n";
+    std::cout << "환경 변수 OPENAI_API_KEY를 설정하거나 직접 입력하세요.\n";
+    std::cout << "(입력한 키는 저장되지 않고 이번 실행에만 사용됩니다)\n\n";
+    
+    return ReadPassword("API Key 입력> ");
+}
+
+void TUI::ShowIntro() {
+    ClearScreen();
+    PrintSystem("================================================");
+    PrintSystem("         [ 에피소드 : 소꿉친구의 비밀 ]");
+    PrintSystem("================================================");
+    PrintSystem("        어릴 적부터 함께 자란 소꿉친구.");
+    PrintSystem("  오랜만에 만났는데 태도가 영 심상치 않다.");
+    PrintSystem("     \"흥, 딱히 너를 기다린 건 아니거든!\"");
+    PrintSystem("================================================");
+    WaitForKey();
+}
+
+std::pair<std::string, std::string> TUI::ShowSetupScreen() {
+    ShowChatScreen("설정");
+    PrintSystem("플레이어의 이름을 입력해 주세요.");
+    std::string pName = ReadInput("이름> ");
+    if (pName.empty()) pName = "당신";
+
+    PrintSystem("캐릭터 이름을 입력해 주세요.");
+    std::string cName = ReadInput("이름> ");
+    
+    return {pName, cName};
+}
+
+std::string TUI::GetPlayerInput(const std::string& playerName) {
+    return ReadInput(playerName + "> ");
 }
 
 void TUI::PrintChunk(const std::string& chunk) {
@@ -162,4 +221,31 @@ void TUI::NewLine() {
 
 void TUI::WaitForKey() {
     _getch();
+}
+
+void TUI::SetupConsole() {
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hOut == INVALID_HANDLE_VALUE) return;
+
+    // 1. Set Font
+    CONSOLE_FONT_INFOEX cfi;
+    cfi.cbSize = sizeof(cfi);
+    GetCurrentConsoleFontEx(hOut, FALSE, &cfi);
+    
+    cfi.dwFontSize.Y = 24; // Larger font height (24px)
+    cfi.FontWeight = FW_NORMAL;
+    wcscpy_s(cfi.FaceName, L"Consolas"); // Use Consolas for clean monospace
+    SetCurrentConsoleFontEx(hOut, FALSE, &cfi);
+
+    // 2. Set Window Size
+    // Set buffer large enough
+    COORD bufferSize = {120, 3000}; // 120 columns wide, 3000 lines scrollback
+    SetConsoleScreenBufferSize(hOut, bufferSize);
+
+    // Set window size (viewport)
+    SMALL_RECT windowSize = {0, 0, 119, 39}; // 120x40 visible area
+    SetConsoleWindowInfo(hOut, TRUE, &windowSize);
+    
+    // Optional: Set Title
+    SetConsoleTitleW(L"AI Simulate - 봄날의 추억");
 }

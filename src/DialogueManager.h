@@ -24,10 +24,6 @@ struct DialogueContext {
     // 히스토리에 새로운 발화 턴을 추가합니다.
     void AddTurn(const std::string& speaker, const std::string& text);
     
-
-
-
-
     // 기록된 모든 턴을 지웁니다.
     void Clear();
 
@@ -55,7 +51,7 @@ public:
     nlohmann::json BuildFullPrompt(Character* character, const std::string& playerName, const std::string& userInput);
     
     // LLM으로부터 응답을 받아 출력하고 반환합니다.
-    std::string PrintReply(LLMClient& client, const nlohmann::json& messages);
+    std::string PrintReply(LLMClient& client, const nlohmann::json& messages, const std::string& characterName);
 
 private:
     TUI& ui_;

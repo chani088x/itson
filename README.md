@@ -55,14 +55,14 @@ cd build
     - `/save`: 현재 상태 저장
     - `/quit` 또는 `/exit`: 게임 종료
     - `/restart`: 재시작
-- **이벤트**: 호감도가 20, 40, 60, 80 등 특정 구간에 도달하면 이벤트 컷신이 출력됩니다.
+- **이벤트**: 호감도가 25, 50, 75, 100 특정 구간에 도달하면 이벤트 컷신이 출력됩니다.
 
 ## 파일 구조 및 커스터마이징
 
 - `data/characters/template_character.json`: AI 캐릭터의 성격, 말투 프롬프트 설정.
 - `data/events/template_events.json`: 호감도별 이벤트 대사 설정. 자유롭게 수정하여 자신만의 스토리를 만드세요.
 - `data/system/config.json`:
-    - `model`: 사용할 모델명 (예: `gpt-4o`, `qwen2.5:7b`)
+    - `model`: 사용할 모델명 (예: `gpt-5`, `qwen2.5:7b`)
     - `useStreaming`: 텍스트 스트리밍 효과 여부
     - `savesDir`: 세이브 파일 경로 (기본: `../saves`)
 

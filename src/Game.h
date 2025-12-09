@@ -30,6 +30,7 @@ private:
     void SaveProgress();
     void LoadProgress();
     void AutoAdvanceRelationship(Character& character);
+    void RunGameLoop();
     void PromptLoadSelection();
     
     // 이벤트 시스템

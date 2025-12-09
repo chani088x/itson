@@ -58,14 +58,7 @@ public:
     // 인덱스를 기반으로 단계 정보를 가져오는 헬퍼 함수입니다.
     StageInfo GetStageInfo(int stageIdx) const;
 
-    // 저장된 기억 조각들을 반환합니다.
-    const std::vector<std::string>& GetMemories() const;
 
-    // 새로운 기억 조각을 추가합니다.
-    void AddMemory(const std::string& memory);
-
-    // 모든 기억을 주어진 목록으로 교체합니다.
-    void SetMemories(const std::vector<std::string>& memories);
 
 
 
@@ -95,7 +88,7 @@ private:
     int affection_;
     int relationshipStage_;
     std::vector<std::string> traits_;
-    std::vector<std::string> memories_;
+
     std::unordered_map<std::string, bool> flags_;
     std::unordered_map<int, bool> triggeredEvents_;
     std::map<int, StageInfo> emotionStages_;

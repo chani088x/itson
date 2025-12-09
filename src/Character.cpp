@@ -72,17 +72,7 @@ StageInfo Character::GetStageInfo(int stageIdx) const {
     return {"알 수 없음", "이 단계에 대한 행동 정의가 없습니다."};
 }
 
-const std::vector<std::string>& Character::GetMemories() const {
-    return memories_;
-}
 
-void Character::AddMemory(const std::string& memory) {
-    memories_.push_back(memory);
-}
-
-void Character::SetMemories(const std::vector<std::string>& memories) {
-    memories_ = memories;
-}
 
 void Character::SetFlag(const std::string& flag, bool value) {
     flags_[flag] = value;

@@ -37,16 +37,7 @@ void Game::Run() {
     bool isKeyValid = false;
     while (!isKeyValid) {
         if (config_.GetApiKey().empty()) {
-            ui_.ClearScreen();
-            ui_.PrintSystem("================================================");
-            ui_.PrintSystem("             [ API 설정 필요 ]");
-            ui_.PrintSystem("================================================");
-            ui_.PrintSystem("OpenAI API 키가 설정되지 않았습니다.");
-            ui_.PrintSystem("환경 변수 OPENAI_API_KEY를 설정하거나 직접 입력하세요.");
-            ui_.PrintSystem("(입력한 키는 저장되지 않고 이번 실행에만 사용됩니다)");
-            ui_.NewLine();
-            
-            std::string key = ui_.ReadPassword("API Key 입력> ");
+            std::string key = ui_.ShowApiKeyPrompt();
             if (!key.empty()) {
                 config_.SetApiKey(key);
                 llmClient_.SetApiKey(key);
@@ -120,67 +111,48 @@ void Game::Run() {
             
             dialogueManager_.GetContext().Clear();
             LoadEvents(config_.GetEventsFile());
+
+
+            ui_.ShowIntro();
             
-            ui_.ClearScreen();
-            ui_.PrintSystem("================================================");
-            ui_.PrintSystem("         [ 에피소드 : 소꿉친구의 비밀 ]");
-            ui_.PrintSystem("================================================");
-            ui_.PrintSystem("        어릴 적부터 함께 자란 소꿉친구.");
-            ui_.PrintSystem("  오랜만에 만났는데 태도가 영 심상치 않다.");
-            ui_.PrintSystem("     \"흥, 딱히 너를 기다린 건 아니거든!\"");
-            ui_.PrintSystem("================================================");
-            ui_.WaitForKey();
-
-            ui_.ShowChatScreen("설정");
-            ui_.PrintSystem("플레이어의 이름을 입력해 주세요.");
-            playerName_ = ui_.ReadInput("이름> ");
-            if (playerName_.empty()) playerName_ = "당신";
-
-            ui_.PrintSystem("캐릭터 이름을 입력해 주세요.");
-            std::string nameInput = ui_.ReadInput("이름> ");
-            if (!nameInput.empty()) {
-                activeCharacter_->SetName(nameInput);
+            auto [pName, cName] = ui_.ShowSetupScreen();
+            playerName_ = pName;
+            
+            if (!cName.empty()) {
+                activeCharacter_->SetName(cName);
             }
-            ui_.ShowChatScreen(activeCharacter_->GetName());
             
+            ui_.ShowChatScreen(activeCharacter_->GetName());
             ui_.PrintSystem(activeCharacter_->GetName() + "과(와) 이야기를 시작합니다.");
             
-            isRunning_ = true;
-            while (isRunning_) {
-                std::string input = ui_.ReadInput(playerName_ + "> ");
-                if (input.empty()) continue;
-
-                if (input.front() == '/') {
-                    if (HandleMetaCommand(input.substr(1))) {
-                        if (!isRunning_) break;
-                        continue;
-                    }
-                }
-                ProcessTurn(input);
-            }
+            RunGameLoop();
         } else if (option == TUI::MenuOption::LoadGame) {
             PromptLoadSelection();
             if (activeCharacter_) {
                 if (playerName_.empty()) playerName_ = "당신"; 
                 ui_.ShowChatScreen(activeCharacter_->GetName());
                 LoadEvents(config_.GetEventsFile());
-                isRunning_ = true;
-                while (isRunning_) {
-                    std::string input = ui_.ReadInput(playerName_ + "> ");
-                    if (input.empty()) continue;
-
-                    if (input.front() == '/') {
-                        if (HandleMetaCommand(input.substr(1))) {
-                            if (!isRunning_) break;
-                            continue;
-                        }
-                    }
-                    ProcessTurn(input);
-                }
+                RunGameLoop();
             }
         }
     }
     ui_.PrintSystem("게임을 종료합니다.");
+}
+
+void Game::RunGameLoop() {
+    isRunning_ = true;
+    while (isRunning_) {
+        std::string input = ui_.GetPlayerInput(playerName_);
+        if (input.empty()) continue;
+
+        if (input.front() == '/') {
+            if (HandleMetaCommand(input.substr(1))) {
+                if (!isRunning_) break;
+                continue;
+            }
+        }
+        ProcessTurn(input);
+    }
 }
 
 void Game::ProcessTurn(const std::string& userInput) {
@@ -192,7 +164,7 @@ void Game::ProcessTurn(const std::string& userInput) {
     // 채팅 메시지 생성 (DialogueManager에게 위임)
     nlohmann::json messages = dialogueManager_.BuildFullPrompt(activeCharacter_, playerName_, userInput);
 
-    std::string npcReply = dialogueManager_.PrintReply(llmClient_, messages);
+    std::string npcReply = dialogueManager_.PrintReply(llmClient_, messages, activeCharacter_->GetName());
 
     context.AddTurn(activeCharacter_->GetName(), npcReply);
 

@@ -26,7 +26,20 @@ public:
     std::string ReadInput(const std::string& prompt);
     std::string ReadPassword(const std::string& prompt);
     
-    // 스트리밍 지원
+    // API 키 입력 화면
+    std::string ShowApiKeyPrompt();
+
+    // 인트로 화면 출력
+    void ShowIntro();
+
+    // 초기 설정 화면 (플레이어 이름, 캐릭터 이름 입력)
+    // first: playerName, second: characterName (empty allowed)
+    std::pair<std::string, std::string> ShowSetupScreen();
+
+    // 메인 게임 루프에서 플레이어 입력 받기
+    std::string GetPlayerInput(const std::string& playerName);
+    
+    // 텍스트 출력 (타이핑 효과)
     void PrintChunk(const std::string& chunk);
     void NewLine();
 
@@ -36,4 +49,5 @@ public:
 
 private:
     void RenderMenu(int selectedIndex);
+    void SetupConsole();
 };

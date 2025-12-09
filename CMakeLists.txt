@@ -12,16 +12,7 @@ endif ()
 
 find_package(CURL REQUIRED)
 
-# Try config-package first; if missing, fall back to FetchContent (header-only).
-find_package(nlohmann_json CONFIG QUIET)
-if (NOT nlohmann_json_FOUND)
-    include(FetchContent)
-    FetchContent_Declare(
-        nlohmann_json
-        URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
-    )
-    FetchContent_MakeAvailable(nlohmann_json)
-endif ()
+# nlohmann_json is now included locally in src/nlohmann/json.hpp
 
 add_executable(
     AIDatingSim
@@ -34,15 +25,13 @@ add_executable(
     src/TUI.cpp
 )
 
-# Always sync data directory on build
-add_custom_target(SyncData ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/data
-        ${CMAKE_BINARY_DIR}/data
+# Create a custom target that runs EVERY time a build is requested
+add_custom_target(SyncData COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/data
+    ${CMAKE_BINARY_DIR}/data
     COMMENT "Syncing data directory..."
 )
-
 add_dependencies(AIDatingSim SyncData)
 
 target_include_directories(AIDatingSim PRIVATE src)
-target_link_libraries(AIDatingSim PRIVATE CURL::libcurl nlohmann_json::nlohmann_json ws2_32 crypt32)
+target_link_libraries(AIDatingSim PRIVATE CURL::libcurl ws2_32 crypt32)
