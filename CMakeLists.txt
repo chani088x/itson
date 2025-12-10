@@ -26,7 +26,9 @@ add_executable(
 )
 
 # Create a custom target that runs EVERY time a build is requested
-add_custom_target(SyncData COMMAND ${CMAKE_COMMAND} -E copy_directory
+add_custom_target(SyncData
+    COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/data
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_SOURCE_DIR}/data
     ${CMAKE_BINARY_DIR}/data
     COMMENT "Syncing data directory..."
