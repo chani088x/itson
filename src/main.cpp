@@ -1,6 +1,7 @@
 #include <iostream>
 
 #ifdef _WIN32
+#include <winsock2.h> // winsock2는 windows.h보다 먼저 포함해야 경고가 없음
 #include <windows.h>
 #endif
 
@@ -28,7 +29,7 @@ int main(int argc, char** argv) {
 
     TUI ui;
 
-    DialogueManager dialogueManager(ui, config);
+    DialogueManager dialogueManager(config);
     LLMClient llmClient(config);
     SaveSystem saveSystem(config.GetSavesDir());
 

@@ -4,10 +4,13 @@
 #include <unordered_map>
 #include <vector>
 #include <map>
+#include <nlohmann/json.hpp>
 
 struct StageInfo {
     std::string name;
     std::string behavior;
+
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(StageInfo, name, behavior)
 };
 
 /**
@@ -18,7 +21,7 @@ public:
     // 기본 능력치로 빈 캐릭터를 생성합니다.
     Character();
 
-    // 주어진 이름으로 초기화된 캐릭터를 생성합니다.
+    // 이름을 받는 생성자
     explicit Character(std::string name);
 
     // 캐릭터의 표시 이름을 반환합니다.
@@ -51,25 +54,8 @@ public:
     // 성격 특성을 할당합니다.
     void SetTraits(const std::vector<std::string>& traits);
 
-    // 감정 단계 맵을 설정합니다 (단계 인덱스 -> 정보).
-    void SetEmotionStages(const std::map<int, StageInfo>& stages);
-    const std::map<int, StageInfo>& GetEmotionStages() const;
-
     // 인덱스를 기반으로 단계 정보를 가져오는 헬퍼 함수입니다.
     StageInfo GetStageInfo(int stageIdx) const;
-
-
-
-
-
-    // 임의의 이벤트 플래그를 설정하거나 해제합니다.
-    void SetFlag(const std::string& flag, bool value);
-
-    // 이벤트 플래그의 값을 반환합니다.
-    bool GetFlag(const std::string& flag) const;
-
-    // 직렬화를 위해 모든 이벤트 플래그를 반환합니다.
-    const std::unordered_map<std::string, bool>& GetFlags() const;
 
     // 임계값 기반 이벤트가 발생했음을 표시합니다.
     void MarkEventTriggered(int threshold);
@@ -89,7 +75,36 @@ private:
     int relationshipStage_;
     std::vector<std::string> traits_;
 
-    std::unordered_map<std::string, bool> flags_;
     std::unordered_map<int, bool> triggeredEvents_;
     std::map<int, StageInfo> emotionStages_;
+
+    friend void to_json(nlohmann::json& j, const Character& p) {
+        j = nlohmann::json{
+            {"name", p.name_},
+            {"affection", p.affection_},
+            {"relationshipStage", p.relationshipStage_},
+            {"traits", p.traits_},
+            {"triggered", p.triggeredEvents_},
+            {"emotionStages", p.emotionStages_}
+        };
+    }
+
+    friend void from_json(const nlohmann::json& j, Character& p) {
+        p.name_ = j.value("name", "Unknown");
+        p.affection_ = j.value("affection", 10);
+        p.relationshipStage_ = j.value("relationshipStage", 0);
+        p.traits_ = j.value("traits", std::vector<std::string>{});
+        // nlohmann::json automatically handles conversion for std::unordered_map<int, bool>
+        // if keys are string representations of integers.
+        if (j.contains("triggered")) {
+             p.triggeredEvents_ = j["triggered"].get<std::unordered_map<int, bool>>();
+        }
+        if (j.contains("emotionStages")) {
+             p.emotionStages_ = j["emotionStages"].get<std::map<int, StageInfo>>();
+        }
+
+        // Fallback for template compatibility (optional)
+        if (j.contains("initialAffection")) p.affection_ = j.value("initialAffection", 10);
+        if (j.contains("initialStage")) p.relationshipStage_ = j.value("initialStage", 0);
+    }
 };

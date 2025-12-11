@@ -7,7 +7,7 @@ constexpr int kMinAffection = -100;
 constexpr int kMaxAffection = 100;
 constexpr int kMinStage = 0;
 constexpr int kMaxStage = 3;
-}  // namespace
+}  // 익명 네임스페이스 종료
 
 Character::Character() : Character("Unknown") {}
 
@@ -56,35 +56,12 @@ void Character::SetTraits(const std::vector<std::string>& traits) {
     traits_ = traits;
 }
 
-void Character::SetEmotionStages(const std::map<int, StageInfo>& stages) {
-    emotionStages_ = stages;
-}
-
-const std::map<int, StageInfo>& Character::GetEmotionStages() const {
-    return emotionStages_;
-}
-
 StageInfo Character::GetStageInfo(int stageIdx) const {
     auto it = emotionStages_.find(stageIdx);
     if (it != emotionStages_.end()) {
         return it->second;
     }
     return {"알 수 없음", "이 단계에 대한 행동 정의가 없습니다."};
-}
-
-
-
-void Character::SetFlag(const std::string& flag, bool value) {
-    flags_[flag] = value;
-}
-
-bool Character::GetFlag(const std::string& flag) const {
-    auto it = flags_.find(flag);
-    return it != flags_.end() ? it->second : false;
-}
-
-const std::unordered_map<std::string, bool>& Character::GetFlags() const {
-    return flags_;
 }
 
 void Character::MarkEventTriggered(int threshold) {

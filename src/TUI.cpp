@@ -1,9 +1,9 @@
 #include "TUI.h"
 
-#include <conio.h> // For _getch on Windows
+#include <conio.h> // Windows에서 _getch 사용
 #include <iostream>
 #include <cstdlib>
-#include <windows.h> // For console colors/CP
+#include <windows.h> // 콘솔 색상/코드페이지 설정용
 #include <thread>
 #include <chrono>
 
@@ -12,13 +12,13 @@
 #define KEY_ENTER 13
 
 TUI::TUI() {
-    // Ensure UTF-8 output
+    // UTF-8 출력 강제
     SetConsoleOutputCP(CP_UTF8);
 
-    // Setup Console Font and Size
+    // 콘솔 글꼴과 크기 설정
     SetupConsole();
     
-    // Hide cursor for menu (optional, but looks better)
+    // 메뉴 화면에서는 커서를 숨김(미관용)
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     CONSOLE_CURSOR_INFO cursorInfo;
     GetConsoleCursorInfo(hConsole, &cursorInfo);
@@ -27,7 +27,7 @@ TUI::TUI() {
 }
 
 TUI::~TUI() {
-    // Restore cursor
+    // 커서 표시 상태 복구
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     CONSOLE_CURSOR_INFO cursorInfo;
     GetConsoleCursorInfo(hConsole, &cursorInfo);
@@ -66,7 +66,7 @@ TUI::MenuOption TUI::ShowMainMenu() {
         RenderMenu(selected);
         
         int c = _getch();
-        if (c == 224) { // Arrow key prefix
+        if (c == 224) { // 방향키 입력을 알리는 프리픽스
             c = _getch();
             if (c == KEY_UP) {
                 selected = (selected - 1 + 3) % 3;
@@ -87,7 +87,7 @@ void TUI::ShowChatScreen(const std::string& characterName) {
     std::cout << "대화 상대: " << characterName << "\n";
     std::cout << "================================================\n\n";
     
-    // Show cursor for chat
+    // 채팅 화면에서는 커서를 다시 보이게 함
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     CONSOLE_CURSOR_INFO cursorInfo;
     GetConsoleCursorInfo(hConsole, &cursorInfo);
@@ -108,6 +108,30 @@ void TUI::PrintPlayer(const std::string& text) {
     std::cout << "\n[Player]: " << text << "\n";
 }
 
+void TUI::PrintNpcTyped(const std::string& name, const std::string& text) {
+    NewLine();
+    PrintChunk("[" + name + "] ");
+    PrintChunk(text);
+    NewLine();
+}
+
+
+
+void TUI::ShowEvent(const std::string& title, const std::vector<std::string>& lines) {
+    ClearScreen();
+    PrintSystem(">>> EVENT: " + title + " <<<");
+    NewLine();
+    
+    for (const auto& line : lines) {
+        PrintChunk(line);
+        NewLine();
+        WaitForKey(); 
+    }
+    
+    PrintSystem(">>> 이벤트 종료 (Enter) <<<");
+    WaitForKey();
+}
+
 std::string TUI::ReadInput(const std::string& prompt) {
     std::cout << "\n" << prompt;
     std::string input;
@@ -120,9 +144,9 @@ std::string TUI::ReadPassword(const std::string& prompt) {
     std::string password;
     int ch;
     while ((ch = _getch()) != KEY_ENTER) {
-        if (ch == 3) { // Ctrl+C
+        if (ch == 3) { // Ctrl+C 입력 시
             std::cout << "^C\n";
-            // Restore cursor before exit
+            // 종료 전 커서 표시 상태 복구
             HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
             CONSOLE_CURSOR_INFO cursorInfo;
             GetConsoleCursorInfo(hConsole, &cursorInfo);
@@ -199,7 +223,7 @@ void TUI::PrintChunk(const std::string& chunk) {
         else if ((c & 0xF0) == 0xE0) charLen = 3;
         else if ((c & 0xF8) == 0xF0) charLen = 4;
         
-        // Output the full character (1~4 bytes)
+        // 완전한 한 글자(1~4바이트)를 출력
         for (int k = 0; k < charLen && i + k < chunk.length(); ++k) {
             std::cout << chunk[i + k];
         }
@@ -207,10 +231,10 @@ void TUI::PrintChunk(const std::string& chunk) {
         
         i += charLen;
         
-        // Delay for typing effect
+        // 타이핑 효과를 위한 지연
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
 
-        // Skip delay for spaces to make it feel natural
+        // 공백은 지연을 건너뛰어 자연스럽게 만듦
         if (c == ' ') std::this_thread::sleep_for(std::chrono::milliseconds(0));
     }
 }
@@ -227,25 +251,25 @@ void TUI::SetupConsole() {
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     if (hOut == INVALID_HANDLE_VALUE) return;
 
-    // 1. Set Font
+    // 1. 글꼴 설정
     CONSOLE_FONT_INFOEX cfi;
     cfi.cbSize = sizeof(cfi);
     GetCurrentConsoleFontEx(hOut, FALSE, &cfi);
     
-    cfi.dwFontSize.Y = 24; // Larger font height (24px)
+    cfi.dwFontSize.Y = 24; // 더 큰 글꼴 높이(24px)
     cfi.FontWeight = FW_NORMAL;
-    wcscpy_s(cfi.FaceName, L"Consolas"); // Use Consolas for clean monospace
+    wcscpy_s(cfi.FaceName, L"Consolas"); // 가독성 좋은 모노스페이스 Consolas 사용
     SetCurrentConsoleFontEx(hOut, FALSE, &cfi);
 
-    // 2. Set Window Size
-    // Set buffer large enough
-    COORD bufferSize = {120, 3000}; // 120 columns wide, 3000 lines scrollback
+    // 2. 콘솔 창/버퍼 크기 설정
+    // 충분한 스크롤백 버퍼 확보
+    COORD bufferSize = {120, 3000}; // 폭 120컬럼, 스크롤백 3000줄
     SetConsoleScreenBufferSize(hOut, bufferSize);
 
-    // Set window size (viewport)
-    SMALL_RECT windowSize = {0, 0, 119, 39}; // 120x40 visible area
+    // 실제 표시되는 창 크기(viewport) 설정
+    SMALL_RECT windowSize = {0, 0, 119, 39}; // 가로 120 x 세로 40 영역
     SetConsoleWindowInfo(hOut, TRUE, &windowSize);
     
-    // Optional: Set Title
-    SetConsoleTitleW(L"AI Simulate - 봄날의 추억");
+    // 선택 사항: 콘솔 제목 설정
+    SetConsoleTitleW(L"AI 연애 시뮬레이터 - 봄날의 추억");
 }

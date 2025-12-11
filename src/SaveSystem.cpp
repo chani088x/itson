@@ -11,25 +11,8 @@
 
 namespace {
     nlohmann::json Serialize(const Character& character, const DialogueContext& context) {
-        nlohmann::json data;
-        data["name"] = character.GetName();
-        data["affection"] = character.GetAffection();
-        data["relationshipStage"] = character.GetRelationshipStage();
-        data["traits"] = character.GetTraits();
-
-
-        nlohmann::json flags = nlohmann::json::object();
-        for (const auto& [flag, value] : character.GetFlags()) {
-            flags[flag] = value;
-        }
-        data["flags"] = flags;
-
-        nlohmann::json triggered = nlohmann::json::object();
-        for (const auto& [threshold, fired] : character.GetTriggeredEvents()) {
-            triggered[std::to_string(threshold)] = fired;
-        }
-        data["triggered"] = triggered;
-
+        nlohmann::json data = character; // 자동 변환 사용
+        
         nlohmann::json history = nlohmann::json::array();
         for (const auto& turn : context.History()) {
             history.push_back({{"speaker", turn.speaker}, {"text", turn.text}});
@@ -39,25 +22,8 @@ namespace {
     }
 
     void Deserialize(const nlohmann::json& data, Character& character, DialogueContext& context) {
-        character.SetName(data.value("name", character.GetName()));
-        character.SetAffection(data.value("affection", character.GetAffection()));
-        character.SetRelationshipStage(data.value("relationshipStage", character.GetRelationshipStage()));
-        if (data.contains("traits") && data["traits"].is_array()) {
-            character.SetTraits(data["traits"].get<std::vector<std::string>>());
-        }
-        if (data.contains("flags") && data["flags"].is_object()) {
-            for (auto& [key, val] : data["flags"].items()) {
-                character.SetFlag(key, val.get<bool>());
-            }
-        }
-        if (data.contains("triggered") && data["triggered"].is_object()) {
-            auto& triggeredMap = character.EditableTriggeredEvents();
-            triggeredMap.clear();
-            for (auto& [key, val] : data["triggered"].items()) {
-                triggeredMap[std::stoi(key)] = val.get<bool>();
-            }
-        }
-
+        character = data.get<Character>(); // 자동 변환 사용
+        
         context.Clear();
         if (data.contains("history") && data["history"].is_array()) {
             for (const auto& entry : data["history"]) {

@@ -23,6 +23,8 @@ public:
     void PrintSystem(const std::string& text);
     void PrintNpc(const std::string& name, const std::string& text);
     void PrintPlayer(const std::string& text);
+    void PrintNpcTyped(const std::string& name, const std::string& text);
+    void ShowEvent(const std::string& title, const std::vector<std::string>& lines);
     std::string ReadInput(const std::string& prompt);
     std::string ReadPassword(const std::string& prompt);
     
@@ -33,7 +35,7 @@ public:
     void ShowIntro();
 
     // 초기 설정 화면 (플레이어 이름, 캐릭터 이름 입력)
-    // first: playerName, second: characterName (empty allowed)
+    // 반환: first=플레이어 이름, second=캐릭터 이름(비워도 허용)
     std::pair<std::string, std::string> ShowSetupScreen();
 
     // 메인 게임 루프에서 플레이어 입력 받기

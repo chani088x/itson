@@ -39,22 +39,21 @@ private:
  */
 class DialogueManager {
 public:
-    DialogueManager(TUI& ui, const Config& config);
+    DialogueManager(const Config& config);
 
     DialogueContext& GetContext();
     const DialogueContext& GetContext() const;
 
     // 사용자 입력을 기반으로 호감도 변화량을 계산합니다.
-    int ScoreAffectionDelta(const std::string& userText, const std::string& npcText) const;
+    int ScoreAffectionDelta(const std::string& userText) const;
 
     // LLM 전송용 전체 JSON 페이로드(시스템 + 히스토리 + 사용자 입력)를 생성합니다.
-    nlohmann::json BuildFullPrompt(Character* character, const std::string& playerName, const std::string& userInput);
+    nlohmann::json BuildFullPrompt(Character* character, const std::string& playerName);
     
-    // LLM으로부터 응답을 받아 출력하고 반환합니다.
-    std::string PrintReply(LLMClient& client, const nlohmann::json& messages, const std::string& characterName);
+    // LLM으로부터 응답을 받아 반환합니다. (출력은 TUI가 담당)
+    std::string FetchNpcResponse(LLMClient& client, const nlohmann::json& messages);
 
 private:
-    TUI& ui_;
     const Config& config_;
     DialogueContext context_;
 };

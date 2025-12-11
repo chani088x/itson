@@ -17,7 +17,7 @@
 
 namespace {
 constexpr std::array<int, 5> kStageThresholds{0, 25, 50, 75, 100};
-}  // namespace
+}  // 익명 네임스페이스 종료
 
 Game::Game(Config& config,
            TUI& ui,
@@ -77,24 +77,11 @@ void Game::Run() {
             nlohmann::json charData;
             Character newChar("New Character");
             if (JsonHelper::LoadFromFile("data/characters/template_character.json", charData)) {
-                newChar.SetName(charData.value("name", "New Character"));
-                newChar.SetAffection(charData.value("initialAffection", config_.GetDefaultInitialAffection()));
-                newChar.SetRelationshipStage(charData.value("initialStage", 0));
-                if (charData.contains("traits") && charData["traits"].is_array()) {
-                    newChar.SetTraits(charData["traits"].get<std::vector<std::string>>());
-                }
+                newChar = charData.get<Character>(); // 누락된 키는 JSON 변환 과정에서 기본값으로 처리됨
                 
-                // 감정 단계 로드
-                if (charData.contains("emotionStages") && charData["emotionStages"].is_object()) {
-                    std::map<int, StageInfo> stages;
-                    for (auto& [key, val] : charData["emotionStages"].items()) {
-                        int stageIdx = std::stoi(key);
-                        stages[stageIdx] = {
-                            val.value("name", "Unknown"),
-                            val.value("behavior", "")
-                        };
-                    }
-                    newChar.SetEmotionStages(stages);
+                // 꼭 필요하면 기본값으로 덮어쓸 수 있지만 Character.cpp의 from_json이 이미 처리함
+                if (charData.contains("initialAffection") && !charData.contains("affection")) {
+                     // from_json에서 처리
                 }
             } else {
                 ui_.PrintSystem("경고: 캐릭터 템플릿(data/characters/template_character.json)을 찾을 수 없습니다.");
@@ -162,13 +149,17 @@ void Game::ProcessTurn(const std::string& userInput) {
     context.AddTurn(playerName_, userInput);
 
     // 채팅 메시지 생성 (DialogueManager에게 위임)
-    nlohmann::json messages = dialogueManager_.BuildFullPrompt(activeCharacter_, playerName_, userInput);
+    nlohmann::json messages = dialogueManager_.BuildFullPrompt(activeCharacter_, playerName_);
 
-    std::string npcReply = dialogueManager_.PrintReply(llmClient_, messages, activeCharacter_->GetName());
+    // LLM으로부터 응답 수신 (UI 출력 없음)
+    std::string npcReply = dialogueManager_.FetchNpcResponse(llmClient_, messages);
+
+    // TUI를 통해 출력 (Game 클래스가 직접 UI 제어)
+    ui_.PrintNpcTyped(activeCharacter_->GetName(), npcReply);
 
     context.AddTurn(activeCharacter_->GetName(), npcReply);
 
-    int affectionDelta = dialogueManager_.ScoreAffectionDelta(userInput, npcReply);
+    int affectionDelta = dialogueManager_.ScoreAffectionDelta(userInput);
     if (affectionDelta != 0) {
         activeCharacter_->AddAffection(affectionDelta);
         AutoAdvanceRelationship(*activeCharacter_);
@@ -275,10 +266,7 @@ void Game::LoadEvents(const std::string& filePath) {
         return;
     }
 
-    events_.clear();
-    for (const auto& entry : doc) {
-        events_.push_back(Event::FromJson(entry));
-    }
+    events_ = doc.get<std::vector<Event>>();
 }
 
 void Game::CheckAndTriggerEvents() {
@@ -317,24 +305,7 @@ void Game::CheckAndTriggerEvents() {
 }
 
 void Game::PlayEvent(const Event& event) {
-    ui_.ClearScreen();
-    ui_.PrintSystem(">>> EVENT: " + event.title + " <<<");
-    ui_.NewLine();
-    
-    for (const auto& line : event.lines) {
-        // TUI::PrintChunk가 이미 타이핑 효과를 제공하므로 바로 출력
-        ui_.PrintChunk(line);
-        ui_.NewLine();
-        ui_.WaitForKey(); 
-    }
-    
-    ui_.PrintSystem(">>> 이벤트 종료 (Enter) <<<");
-    ui_.WaitForKey();
-    
-    // 선택지 처리 로직 제거됨 (사용자 요청)
-    
-    ui_.WaitForKey();
-    ui_.ShowChatScreen(activeCharacter_->GetName()); // 화면 복구
+    ui_.ShowEvent(event.title, event.lines);
 }
 
 void Game::RestoreChatHistory() {
