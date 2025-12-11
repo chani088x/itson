@@ -263,10 +263,16 @@ void Game::LoadEvents(const std::string& filePath) {
         return;
     }
     if (!doc.is_array()) {
+        std::cerr << "Error: Events file root is not an array." << std::endl;
         return;
     }
 
-    events_ = doc.get<std::vector<Event>>();
+    try {
+        events_ = doc.get<std::vector<Event>>();
+    } catch (const nlohmann::json::exception& e) {
+        std::cerr << "JSON Parsing Error: " << e.what() << std::endl;
+        std::cerr << "Dump: " << doc.dump(4) << std::endl;
+    }
 }
 
 void Game::CheckAndTriggerEvents() {
